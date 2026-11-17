@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>ATHENA 2027 Social Kit · Edit your session post</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Source+Serif+4:ital,wght@0,600;1,600&display=swap" rel="stylesheet">
+<style>
+@font-face{font-family:"Open Sauce One";font-weight:500;src:url("open-sauce-one-medium.woff2") format("woff2")}
+*{box-sizing:border-box}
+body{margin:0;background:#F8F7EE;color:#0C2E40;font:500 16px/1.5 "Open Sauce One",system-ui,sans-serif}
+header{background:#0C2E40;color:#fff;padding:18px 24px;border-bottom:3px solid #A4853E}
+header h1{margin:0;font:600 24px/1.2 "Source Serif 4",Georgia,serif}
+header p{margin:4px 0 0;color:#DAE0DC;font-size:15px}
+header a{color:#D6BA80}
+main{display:grid;grid-template-columns:minmax(300px,440px) 1fr;gap:28px;max-width:1240px;margin:0 auto;padding:24px}
+@media(max-width:860px){main{grid-template-columns:1fr}}
+label{display:block;font:600 12px/1.3 Poppins,sans-serif;letter-spacing:.07em;text-transform:uppercase;margin:16px 0 6px}
+label small{font:500 12px/1.3 "Open Sauce One",sans-serif;letter-spacing:0;text-transform:none;color:#5A6B74;margin-left:6px}
+textarea,select{width:100%;font:500 16px/1.4 "Open Sauce One",system-ui,sans-serif;color:#0C2E40;background:#fff;border:1.5px solid #B9C4C0;border-radius:8px;padding:10px 12px}
+textarea{resize:vertical;min-height:46px}
+textarea:focus,select:focus,button:focus-visible{outline:3px solid #A4853E;outline-offset:2px}
+.btns{display:flex;flex-wrap:wrap;gap:10px;margin-top:20px}
+button{font:600 15px/1 Poppins,sans-serif;padding:13px 18px;border-radius:8px;border:0;cursor:pointer;background:#0C2E40;color:#fff}
+button.sec{background:transparent;color:#0C2E40;border:1.5px solid #0C2E40}
+.note{font-size:14px;color:#3B4A52;margin-top:14px}
+.warn{display:none;margin-top:12px;padding:10px 12px;border-left:4px solid #A45204;background:#fff;font-size:14px}
+canvas{width:100%;max-width:640px;height:auto;display:block;border-radius:6px;box-shadow:0 10px 30px rgba(12,46,64,.22)}
+</style>
+</head>
+<body>
+<header><h1>Edit your session post</h1><p>Change any line, see it on the image, and download it. Nothing here changes the kit: your edits stay in this browser. <a id="back" href="../">Back to the Social Kit</a></p></header>
+<main>
+<section aria-label="Text fields">
+  <label for="who">Speaker</label><select id="who"></select>
+  <label for="prob">Opening question <small>put *asterisks* around the words to underline in gold</small></label><textarea id="prob" rows="3"></textarea>
+  <label for="lab">Invitation line</label><textarea id="lab" rows="1"></textarea>
+  <label for="ttl">Session title</label><textarea id="ttl" rows="2"></textarea>
+  <label for="ben">What people will learn</label><textarea id="ben" rows="3"></textarea>
+  <label for="role">Title <small>shown in capitals</small></label><textarea id="role" rows="2"></textarea>
+  <label for="cred">Second line</label><textarea id="cred" rows="2"></textarea>
+  <div class="btns">
+    <button type="button" id="dl-li">Download for LinkedIn (1200 × 1500)</button>
+    <button type="button" id="dl-ig">Download for Instagram (1080 × 1350)</button>
+    <button type="button" class="sec" id="reset">Reset to the original text</button>
+  </div>
+  <p class="warn" id="warn" role="status">The text is longer than the space on the image. Shorten a line so nothing overlaps.</p>
+  <p class="note">The event name, the button, and the website stay fixed so every post points to the same place.</p>
+</section>
+<section aria-label="Preview"><canvas id="cv" width="1200" height="1500" role="img" aria-label="Preview of your session post"></canvas></section>
+</main>
+<script>
+(async function(){
+  var W=1200,H=1500,NAVY='#0C2E40',BRONZE='#A4853E',GOLD='#D6BA80',CREAM='#DAE0DC',PAPER='#F3ECDD';
+  var cv=document.getElementById('cv'),ctx=cv.getContext('2d'),DATA=await (await fetch('data.json')).json();
+  var F=['prob','lab','ttl','ben','role','cred'],el={},sel=document.getElementById('who'),warn=document.getElementById('warn');
+  F.forEach(function(k){el[k]=document.getElementById(k)});
+  Object.keys(DATA).sort(function(a,b){return DATA[a].name.replace('Dr. ','').localeCompare(DATA[b].name.replace('Dr. ',''))}).forEach(function(s){var o=document.createElement('option');o.value=s;o.textContent=DATA[s].name;sel.appendChild(o)});
+  var q=new URLSearchParams(location.search).get('s'); if(q&&DATA[q]) sel.value=q;
+  function img(src){return new Promise(function(ok){var i=new Image();i.onload=function(){ok(i)};i.onerror=function(){ok(null)};i.src=src})}
+  var bg=await img('bg.jpg'),photo=null,cur=null;
+  try{await Promise.all(['600 84px "Source Serif 4"','italic 600 44px "Source Serif 4"','700 30px Poppins','600 38px Poppins','500 44px "Open Sauce One"'].map(function(f){return document.fonts.load(f)}))}catch(e){}
+  function font(f,ls){ctx.font=f; if('letterSpacing' in ctx) ctx.letterSpacing=ls||'0px'}
+  // quebra em linhas; cada palavra leva a marca de destaque (entre *asteriscos*)
+  function lines(text,f,maxW,ls){font(f,ls);var out=[],hl=false;
+    text.split('\n').forEach(function(par){var words=[];par.split(/\s+/).filter(Boolean).forEach(function(w){var parts=w.split('*');
+        for(var i=0;i<parts.length;i++){if(i>0)hl=!hl; if(parts[i]) words.push({t:parts[i],hl:hl,glue:i>0&&words.length&&words[words.length-1].g===w}); if(parts[i]) words[words.length-1].g=w}});
+      var line=[],lw=0,sp=ctx.measureText(' ').width;
+      words.forEach(function(w){var ww=ctx.measureText(w.t).width,add=(line.length&&!w.glue?sp:0)+ww;
+        if(line.length&&lw+add>maxW){out.push(line);line=[];lw=0;add=ww}
+        w.x=lw+(line.length&&!w.glue?sp:0); w.w=ww; line.push(w); lw+=add});
+      if(line.length) out.push(line)});
+    return out}
+  function drawLines(ls,f,x,y,lh,size,color,letter){font(f,letter);ctx.textBaseline='alphabetic';
+    ls.forEach(function(line,i){var by=y+i*lh;
+      // faixa dourada atrás das palavras destacadas (de 62% a 92% da altura da linha)
+      var run=null;line.concat([{hl:false}]).forEach(function(w){if(w.hl){if(!run)run=[w.x,w.x+w.w];else run[1]=w.x+w.w}else if(run){ctx.fillStyle=BRONZE;ctx.fillRect(x+run[0]-4,by+lh*.62,run[1]-run[0]+8,lh*.30);run=null}});
+      ctx.fillStyle=color;line.forEach(function(w){ctx.fillText(w.t,x+w.x,by+lh*.5+size*.34)})});
+    return y+ls.length*lh}
+  function render(){
+    var d={};F.forEach(function(k){d[k]=el[k].value.trim()});
+    ctx.setTransform(1,0,0,1,0,0);ctx.clearRect(0,0,W,H);ctx.fillStyle=NAVY;ctx.fillRect(0,0,W,H);
+    if(bg){var bw=bg.width*H/bg.height;ctx.drawImage(bg,-(bw-W)*.78,0,bw,H)}
+    var g=ctx.createLinearGradient(0,0,W,0);g.addColorStop(0,'rgba(12,46,64,1)');g.addColorStop(.34,'rgba(12,46,64,.93)');g.addColorStop(.62,'rgba(12,46,64,.62)');g.addColorStop(1,'rgba(12,46,64,.18)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    g=ctx.createLinearGradient(0,0,0,H);g.addColorStop(0,'rgba(12,46,64,.5)');g.addColorStop(.4,'rgba(12,46,64,.3)');g.addColorStop(.62,'rgba(12,46,64,0)');ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    // foto
+    if(photo){ctx.save();var pw=cur.framed?560:620,ph=photo.height*pw/photo.width,px=cur.framed?590:560,py=cur.framed?800:770;
+      ctx.translate(px+pw/2,py+ph/2);ctx.rotate(cur.rot*Math.PI/180);ctx.shadowColor='rgba(0,0,0,.45)';ctx.shadowBlur=18;ctx.shadowOffsetX=6;ctx.shadowOffsetY=12;
+      if(cur.framed){ctx.fillStyle=PAPER;ctx.fillRect(-pw/2-10,-ph/2-10,pw+20,ph+20);ctx.shadowColor='transparent'}
+      ctx.drawImage(photo,-pw/2,-ph/2,pw,ph);ctx.restore()}
+    // bloco de cima
+    var x=84,y=78,mw=1032;
+    font('600 30px "Source Serif 4"');ctx.fillStyle='#fff';ctx.textBaseline='alphabetic';ctx.fillText('ATHENA 2027 Conference & Awards Celebration',x,y+28);y+=36+26;
+    y=drawLines(lines(d.prob,'600 84px "Source Serif 4"',mw),'600 84px "Source Serif 4"',x,y,90,84,'#fff');y+=30;
+    y=drawLines(lines(d.lab,'700 30px Poppins',mw),'700 30px Poppins',x,y,36,30,GOLD);y+=6;
+    y=drawLines(lines(d.ttl,'italic 600 44px "Source Serif 4"',mw),'italic 600 44px "Source Serif 4"',x,y,51,44,'#fff');y+=18;
+    y=drawLines(lines(d.ben,'500 44px "Open Sauce One"',mw),'500 44px "Open Sauce One"',x,y,55,44,CREAM);
+    var topEnd=y;
+    // bloco de baixo, ancorado 150px acima do fim
+    var bw2=446,rl=lines(d.role.toUpperCase(),'700 30px Poppins',bw2,'1.8px'),cl=lines(d.cred,'500 30px "Open Sauce One"',bw2);
+    var hWho=rl.length*38+(cl.length?8+cl.length*39:0),total=hWho+34+63,by=H-150-total;
+    ctx.fillStyle=BRONZE;ctx.fillRect(84,by,4,hWho);
+    var yy=drawLines(rl,'700 30px Poppins',84+24,by,38,30,GOLD,'1.8px'); if(cl.length) yy=drawLines(cl,'500 30px "Open Sauce One"',84+24,yy+8,39,30,CREAM);
+    var cy=by+hWho+34;font('700 30px Poppins','2.1px');var ct='JOIN US IN LOS ANGELES',cw=ctx.measureText(ct).width;
+    ctx.fillStyle=GOLD;ctx.fillRect(84,cy,cw+56,63);ctx.fillStyle=NAVY;ctx.fillText(ct,84+28,cy+42);
+    // faixa do site
+    ctx.fillStyle=NAVY;ctx.fillRect(0,H-104,W,104);ctx.fillStyle=BRONZE;ctx.fillRect(0,H-104,W,4);
+    font('600 38px Poppins','1.1px');ctx.fillStyle='#fff';ctx.textAlign='center';ctx.fillText('conference.athenainternational.org',W/2,H-104+66);ctx.textAlign='left';
+    warn.style.display=(topEnd>by-24)?'block':'none';
+  }
+  async function load(){cur=DATA[sel.value];document.getElementById('back').href='../?me='+encodeURIComponent(sel.value);F.forEach(function(k){el[k].value=cur[k]});photo=await img('cut/'+sel.value+'.png');render()}
+  function download(w,h){var c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').drawImage(cv,0,0,w,h);
+    c.toBlob(function(b){var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=sel.value+'_session_'+(w===1200?'linkedin_1200x1500':'ig-post_1080x1350')+'_edited.png';a.click();setTimeout(function(){URL.revokeObjectURL(a.href)},2000)},'image/png')}
+  F.forEach(function(k){el[k].addEventListener('input',render)});
+  sel.addEventListener('change',load);
+  document.getElementById('reset').addEventListener('click',load);
+  document.getElementById('dl-li').addEventListener('click',function(){download(1200,1500)});
+  document.getElementById('dl-ig').addEventListener('click',function(){download(1080,1350)});
+  await load(); if(document.fonts&&document.fonts.ready) document.fonts.ready.then(render);
+})();
+</script>
+</body>
+</html>
